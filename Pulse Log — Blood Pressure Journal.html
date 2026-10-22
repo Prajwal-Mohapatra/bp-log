@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pulse Log — Blood Pressure Journal</title>
+<meta name="theme-color" content="#1F6F5C">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pulse Log">
+<link id="appleIcon" rel="apple-touch-icon">
+<link id="manifestLink" rel="manifest">
+<style>
+:root{
+  --bg:#EEF2F0; --surface:#FFFFFF; --ink:#16302B; --ink-soft:#4A5D58; --line:#D7E0DC;
+  --accent:#1F6F5C; --accent-soft:#E4F0EB;
+  --normal:#2F9E59; --elevated:#CF9B2B; --stage1:#E0802F; --stage2:#D1495B; --crisis:#7A1F3D;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10201C; --surface:#172B26; --ink:#EAF2EF; --ink-soft:#A9C2BB; --line:#2A423C;
+    --accent:#52B296; --accent-soft:#1C352F;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10201C; --surface:#172B26; --ink:#EAF2EF; --ink-soft:#A9C2BB; --line:#2A423C;
+  --accent:#52B296; --accent-soft:#1C352F;
+}
+*{box-sizing:border-box;}
+html{scroll-padding-top:env(safe-area-inset-top,0px);}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+h1,h2,h3{font-family: "Iowan Old Style","Palatino Linotype",Georgia,serif; font-weight:600; margin:0;}
+::before{box-sizing:border-box;}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface);}
+
+header{
+  position:sticky; top:0; z-index:5; background:var(--surface); border-bottom:1px solid var(--line);
+  padding:calc(14px + env(safe-area-inset-top,0px)) 20px 14px;
+}
+.header-row{display:flex; align-items:baseline; justify-content:space-between; max-width:960px; margin:0 auto; gap:10px; flex-wrap:wrap;}
+.brand{display:flex; align-items:center; gap:10px;}
+.brand h1{font-size:1.4rem; letter-spacing:.2px;}
+.logo-icon{
+  width:34px; height:34px; border-radius:10px; background:linear-gradient(155deg,var(--accent),#133F34);
+  color:#fff; display:flex; align-items:center; justify-content:center; font-size:17px; flex:none;
+  box-shadow:0 4px 10px -4px rgba(31,111,92,.55);
+}
+.brand span{color:var(--ink-soft); font-size:.85rem;}
+nav{display:flex; gap:4px; max-width:960px; margin:12px auto 0; overflow-x:auto;}
+nav button{
+  border:none; background:transparent; color:var(--ink-soft); font-size:.92rem; padding:10px 16px;
+  border-radius:999px; cursor:pointer; white-space:nowrap; font-family:inherit; min-height:40px;
+  transition:background .15s ease, color .15s ease;
+}
+nav button:hover{background:var(--bg); color:var(--ink);}
+nav button.active{background:var(--accent); color:#fff; font-weight:600;}
+nav button.active:hover{background:var(--accent); color:#fff;}
+
+main{max-width:960px; margin:0 auto; padding:22px 20px 60px;}
+section.view{display:none;}
+section.view.active{display:block; animation:fadeIn .28s ease;}
+@keyframes fadeIn{from{opacity:0; transform:translateY(5px);} to{opacity:1; transform:translateY(0);}}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:20px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,.03), 0 10px 26px -20px rgba(22,48,43,.4);}
+.card h2{font-size:1.1rem; margin-bottom:4px;}
+.card .sub{color:var(--ink-soft); font-size:.85rem; margin-bottom:14px;}
+
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px;}
+.grid-3{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
+@media (max-width:640px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+.stat{display:flex; flex-direction:column; gap:4px;}
+.stat .num{font-family:"Iowan Old Style",Georgia,serif; font-size:2.1rem; line-height:1;}
+.stat .lbl{color:var(--ink-soft); font-size:.8rem;}
+.badge{display:inline-block; padding:4px 12px; border-radius:999px; font-size:.76rem; font-weight:600; color:#fff; letter-spacing:.01em;}
+
+form{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+form .full{grid-column:1/-1;}
+@media (max-width:520px){form{grid-template-columns:1fr;}}
+label{display:block; font-size:.8rem; color:var(--ink-soft); margin-bottom:5px;}
+input,select{
+  width:100%; padding:10px 12px; border:1px solid var(--line); border-radius:9px; background:var(--bg);
+  color:var(--ink); font-size:.95rem; font-family:inherit;
+}
+input:focus,select:focus{outline:2px solid var(--accent); outline-offset:1px;}
+.armtoggle{display:flex; gap:8px;}
+.armtoggle button{flex:1; padding:12px; min-height:46px; border-radius:10px; border:1px solid var(--line); background:var(--bg); color:var(--ink); cursor:pointer; font-family:inherit; font-size:.95rem; transition:all .15s ease;}
+.armtoggle button.sel{background:var(--accent); color:#fff; border-color:var(--accent);}
+.submit{
+  grid-column:1/-1; background:var(--accent); color:#fff; border:none; padding:13px; min-height:46px; border-radius:10px;
+  font-size:.95rem; font-weight:600; cursor:pointer; font-family:inherit; transition:transform .1s ease, opacity .15s ease;
+}
+.submit:active{transform:scale(.98); opacity:.92;}
+.del{min-height:32px;}
+
+table{width:100%; border-collapse:collapse; font-size:.88rem;}
+th{text-align:left; color:var(--ink-soft); font-weight:500; font-size:.75rem; text-transform:uppercase; letter-spacing:.03em; padding:8px 6px; border-bottom:1px solid var(--line);}
+td{padding:10px 6px; border-bottom:1px solid var(--line);}
+tbody tr:hover{background:var(--accent-soft);}
+.tablewrap{overflow-x:auto;}
+.del{background:none; border:none; color:var(--ink-soft); cursor:pointer; font-size:.85rem;}
+.del:hover{color:var(--stage2);}
+.empty{color:var(--ink-soft); font-size:.9rem; padding:20px 0; text-align:center;}
+
+canvas{max-width:100%;}
+.legend{display:flex; flex-wrap:wrap; gap:12px; margin-top:10px; font-size:.78rem; color:var(--ink-soft);}
+.legend span{display:inline-flex; align-items:center; gap:6px;}
+.dot{width:9px; height:9px; border-radius:50%; display:inline-block;}
+
+.scaletable td,.scaletable th{padding:7px 8px;}
+.swatch{width:12px; height:12px; border-radius:3px; display:inline-block; margin-right:7px;}
+footer{text-align:center; color:var(--ink-soft); font-size:.78rem; padding:10px 20px 30px;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-row">
+    <div class="brand"><span class="logo-icon">♥</span><h1>Pulse Log</h1><span id="profileLine">Set up your profile →</span></div>
+  </div>
+  <nav id="tabs">
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="add">Add Reading</button>
+    <button data-view="history">History</button>
+    <button data-view="charts">Charts</button>
+    <button data-view="profile">Profile</button>
+  </nav>
+</header>
+
+<main>
+
+<section id="view-dashboard" class="view active">
+  <div class="grid-3">
+    <div class="card stat"><span class="lbl">Latest reading</span><span class="num" id="latestBP">—</span><span id="latestBadgeWrap"></span></div>
+    <div class="card stat"><span class="lbl">Average (last 7)</span><span class="num" id="avgBP">—</span><span class="lbl" id="avgPulse"></span></div>
+    <div class="card stat"><span class="lbl">Total readings logged</span><span class="num" id="totalCount">0</span><span class="lbl" id="sinceDate"></span></div>
+  </div>
+  <div class="card">
+    <h2>Recent entries</h2>
+    <div class="sub">Your last 5 logs</div>
+    <div class="tablewrap"><table id="recentTable"><thead><tr><th>Date</th><th>Time</th><th>Arm</th><th>BP</th><th>Pulse</th><th>Category</th></tr></thead><tbody></tbody></table></div>
+    <div class="empty" id="recentEmpty" style="display:none;">No readings yet. Add your first one in the "Add Reading" tab.</div>
+  </div>
+  <div class="card">
+    <h2>Classification reference</h2>
+    <div class="sub">ACC/AHA adult blood pressure categories (mmHg) — the most widely used clinical standard, also followed in Indian practice</div>
+    <div class="tablewrap"><table class="scaletable">
+      <thead><tr><th>Category</th><th>Systolic</th><th></th><th>Diastolic</th></tr></thead>
+      <tbody>
+        <tr><td><span class="swatch" style="background:var(--normal)"></span>Normal</td><td>&lt;120</td><td>and</td><td>&lt;80</td></tr>
+        <tr><td><span class="swatch" style="background:var(--elevated)"></span>Elevated</td><td>120–129</td><td>and</td><td>&lt;80</td></tr>
+        <tr><td><span class="swatch" style="background:var(--stage1)"></span>Stage 1 hypertension</td><td>130–139</td><td>or</td><td>80–89</td></tr>
+        <tr><td><span class="swatch" style="background:var(--stage2)"></span>Stage 2 hypertension</td><td>≥140</td><td>or</td><td>≥90</td></tr>
+        <tr><td><span class="swatch" style="background:var(--crisis)"></span>Hypertensive crisis</td><td>&gt;180</td><td>and/or</td><td>&gt;120</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section id="view-add" class="view">
+  <div class="card">
+    <h2>Log a reading</h2>
+    <div class="sub">Rest 5 minutes before measuring, feet flat, arm at heart level</div>
+    <form id="bpForm">
+      <div><label for="f-date">Date</label><input type="date" id="f-date" required></div>
+      <div><label for="f-time">Time</label><input type="time" id="f-time" required></div>
+      <div class="full"><label>Arm used</label>
+        <div class="armtoggle">
+          <button type="button" data-arm="Left" class="sel">Left</button>
+          <button type="button" data-arm="Right">Right</button>
+        </div>
+      </div>
+      <div><label for="f-sys">Systolic (mmHg)</label><input type="number" id="f-sys" min="60" max="260" required></div>
+      <div><label for="f-dia">Diastolic (mmHg)</label><input type="number" id="f-dia" min="30" max="160" required></div>
+      <div><label for="f-pulse">Pulse (bpm)</label><input type="number" id="f-pulse" min="30" max="220" required></div>
+      <div><label for="f-note">Note (optional)</label><input type="text" id="f-note" placeholder="e.g. after walk"></div>
+      <button type="submit" class="submit">Save reading</button>
+    </form>
+  </div>
+</section>
+
+<section id="view-history" class="view">
+  <div class="card">
+    <h2>All readings</h2>
+    <div class="sub" id="histCount"></div>
+    <div class="tablewrap"><table id="historyTable"><thead><tr><th>Date</th><th>Time</th><th>Arm</th><th>Sys</th><th>Dia</th><th>Pulse</th><th>Category</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="empty" id="histEmpty" style="display:none;">Nothing logged yet.</div>
+  </div>
+</section>
+
+<section id="view-charts" class="view">
+  <div class="card">
+    <h2>Trend</h2>
+    <div class="sub">Systolic, diastolic and pulse over your logged readings</div>
+    <canvas id="trendChart" width="880" height="300"></canvas>
+    <div class="legend">
+      <span><i class="dot" style="background:#D1495B"></i>Systolic</span>
+      <span><i class="dot" style="background:#1F6F5C"></i>Diastolic</span>
+      <span><i class="dot" style="background:#CF9B2B"></i>Pulse</span>
+    </div>
+  </div>
+  <div class="grid-2">
+    <div class="card">
+      <h2>Distribution 1 — by category</h2>
+      <div class="sub">Count of readings in each BP category</div>
+      <canvas id="distCategory" width="420" height="280"></canvas>
+    </div>
+    <div class="card">
+      <h2>Distribution 2 — left vs right arm</h2>
+      <div class="sub">Average systolic / diastolic / pulse by arm</div>
+      <canvas id="distArm" width="420" height="280"></canvas>
+      <div class="legend">
+        <span><i class="dot" style="background:#D1495B"></i>Systolic</span>
+        <span><i class="dot" style="background:#1F6F5C"></i>Diastolic</span>
+        <span><i class="dot" style="background:#CF9B2B"></i>Pulse</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="view-profile" class="view">
+  <div class="card">
+    <h2>Your profile</h2>
+    <div class="sub">Used to personalise your dashboard. Stored only on this device.</div>
+    <form id="profileForm">
+      <div><label for="p-name">Name</label><input type="text" id="p-name" placeholder="Your name"></div>
+      <div><label for="p-age">Age</label><input type="number" id="p-age" min="1" max="120"></div>
+      <div><label for="p-gender">Gender</label>
+        <select id="p-gender">
+          <option value="">Select</option>
+          <option>Female</option>
+          <option>Male</option>
+          <option>Other</option>
+          <option>Prefer not to say</option>
+        </select>
+      </div>
+      <div><label for="p-city">City</label><input type="text" id="p-city" placeholder="e.g. Bhubaneswar"></div>
+      <button type="submit" class="submit">Save profile</button>
+    </form>
+  </div>
+</section>
+
+</main>
+<footer>Readings are stored privately in this browser only. This is a personal tracker, not a diagnostic device — consult a doctor for medical advice.</footer>
+
+<script>
+(function(){
+  "use strict";
+  var LS_READ = "pulselog_readings_v1", LS_PROF = "pulselog_profile_v1";
+  var readings = [], profile = {};
+  try { readings = JSON.parse(localStorage.getItem(LS_READ) || "[]"); } catch(e){ readings = []; }
+  try { profile = JSON.parse(localStorage.getItem(LS_PROF) || "{}"); } catch(e){ profile = {}; }
+
+  function saveReadings(){ try{ localStorage.setItem(LS_READ, JSON.stringify(readings)); }catch(e){} }
+  function saveProfile(){ try{ localStorage.setItem(LS_PROF, JSON.stringify(profile)); }catch(e){} }
+
+  function classify(sys,dia){
+    if(sys>180||dia>120) return {label:"Hypertensive crisis", color:"var(--crisis)", hex:"#7A1F3D"};
+    if(sys>=140||dia>=90) return {label:"Stage 2 hypertension", color:"var(--stage2)", hex:"#D1495B"};
+    if(sys>=130||dia>=80) return {label:"Stage 1 hypertension", color:"var(--stage1)", hex:"#E0802F"};
+    if(sys>=120&&dia<80) return {label:"Elevated", color:"var(--elevated)", hex:"#CF9B2B"};
+    return {label:"Normal", color:"var(--normal)", hex:"#2F9E59"};
+  }
+  function fmtDate(d){
+    var p = d.split("-"); return p.length===3 ? (p[2]+"/"+p[1]+"/"+p[0]) : d;
+  }
+  function fmtTime(t){
+    var p=t.split(":"); if(p.length<2) return t;
+    var h=parseInt(p[0],10), m=p[1], ap = h>=12?"PM":"AM"; var h12 = h%12; if(h12===0) h12=12;
+    return h12+":"+m+" "+ap;
+  }
+  function sortedReadings(){
+    return readings.slice().sort(function(a,b){ return (a.date+a.time) < (b.date+b.time) ? -1 : 1; });
+  }
+
+  // ---- Tabs ----
+  var tabs = document.querySelectorAll("#tabs button");
+  tabs.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      tabs.forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      document.querySelectorAll("section.view").forEach(function(v){ v.classList.remove("active"); });
+      document.getElementById("view-"+btn.dataset.view).classList.add("active");
+      if(btn.dataset.view==="charts") drawCharts();
+    });
+  });
+
+  // ---- Add form ----
+  var armSel = "Left";
+  document.querySelectorAll(".armtoggle button").forEach(function(b){
+    b.addEventListener("click", function(){
+      document.querySelectorAll(".armtoggle button").forEach(function(x){ x.classList.remove("sel"); });
+      b.classList.add("sel"); armSel = b.dataset.arm;
+    });
+  });
+  var today = new Date();
+  document.getElementById("f-date").value = today.toISOString().slice(0,10);
+  document.getElementById("f-time").value = today.toTimeString().slice(0,5);
+
+  document.getElementById("bpForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    var sys = parseInt(document.getElementById("f-sys").value,10);
+    var dia = parseInt(document.getElementById("f-dia").value,10);
+    var pulse = parseInt(document.getElementById("f-pulse").value,10);
+    readings.push({
+      id: Date.now().toString(36),
+      date: document.getElementById("f-date").value,
+      time: document.getElementById("f-time").value,
+      arm: armSel, sys: sys, dia: dia, pulse: pulse,
+      note: document.getElementById("f-note").value || ""
+    });
+    saveReadings();
+    document.getElementById("f-sys").value="";
+    document.getElementById("f-dia").value="";
+    document.getElementById("f-pulse").value="";
+    document.getElementById("f-note").value="";
+    renderAll();
+    tabs[0].click();
+  });
+
+  // ---- Profile form ----
+  function loadProfileForm(){
+    document.getElementById("p-name").value = profile.name || "";
+    document.getElementById("p-age").value = profile.age || "";
+    document.getElementById("p-gender").value = profile.gender || "";
+    document.getElementById("p-city").value = profile.city || "";
+  }
+  loadProfileForm();
+  document.getElementById("profileForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    profile = {
+      name: document.getElementById("p-name").value,
+      age: document.getElementById("p-age").value,
+      gender: document.getElementById("p-gender").value,
+      city: document.getElementById("p-city").value
+    };
+    saveProfile(); renderProfileLine(); tabs[0].click();
+  });
+  function renderProfileLine(){
+    var el = document.getElementById("profileLine");
+    if(profile.name || profile.gender){
+      var bits = [];
+      if(profile.name) bits.push(profile.name);
+      if(profile.gender) bits.push(profile.gender);
+      if(profile.age) bits.push(profile.age+" yrs");
+      if(profile.city) bits.push(profile.city);
+      el.textContent = bits.join(" · ");
+    } else { el.textContent = "Set up your profile →"; }
+  }
+
+  // ---- Dashboard / History rendering ----
+  function badge(cat){
+    var s = document.createElement("span");
+    s.className = "badge"; s.textContent = cat.label; s.style.background = cat.hex;
+    return s;
+  }
+  function renderAll(){
+    renderProfileLine();
+    var sr = sortedReadings();
+    document.getElementById("totalCount").textContent = readings.length;
+    if(sr.length){
+      var first = sr[0];
+      document.getElementById("sinceDate").textContent = "since " + fmtDate(first.date);
+    } else document.getElementById("sinceDate").textContent = "";
+
+    // latest
+    if(sr.length){
+      var last = sr[sr.length-1];
+      var cat = classify(last.sys,last.dia);
+      document.getElementById("latestBP").textContent = last.sys+"/"+last.dia;
+      var w = document.getElementById("latestBadgeWrap"); w.innerHTML=""; w.appendChild(badge(cat));
+    } else {
+      document.getElementById("latestBP").textContent = "—";
+      document.getElementById("latestBadgeWrap").innerHTML = "";
+    }
+
+    // avg last 7
+    var last7 = sr.slice(-7);
+    if(last7.length){
+      var s=0,d=0,p=0;
+      last7.forEach(function(r){ s+=r.sys; d+=r.dia; p+=r.pulse; });
+      var n=last7.length;
+      document.getElementById("avgBP").textContent = Math.round(s/n)+"/"+Math.round(d/n);
+      document.getElementById("avgPulse").textContent = "avg pulse "+Math.round(p/n)+" bpm · "+n+" reading"+(n>1?"s":"");
+    } else {
+      document.getElementById("avgBP").textContent = "—"; document.getElementById("avgPulse").textContent = "";
+    }
+
+    // recent table
+    var recent = sr.slice(-5).reverse();
+    var tbody = document.querySelector("#recentTable tbody"); tbody.innerHTML = "";
+    document.getElementById("recentEmpty").style.display = recent.length ? "none" : "block";
+    recent.forEach(function(r){
+      var cat = classify(r.sys,r.dia);
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>"+fmtDate(r.date)+"</td><td>"+fmtTime(r.time)+"</td><td>"+r.arm+"</td><td>"+r.sys+"/"+r.dia+"</td><td>"+r.pulse+"</td><td></td>";
+      tr.lastElementChild.appendChild(badge(cat));
+      tbody.appendChild(tr);
+    });
+
+    // full history
+    var all = sr.slice().reverse();
+    var htbody = document.querySelector("#historyTable tbody"); htbody.innerHTML = "";
+    document.getElementById("histEmpty").style.display = all.length ? "none" : "block";
+    document.getElementById("histCount").textContent = all.length + " reading" + (all.length===1?"":"s") + " logged";
+    all.forEach(function(r){
+      var cat = classify(r.sys,r.dia);
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>"+fmtDate(r.date)+"</td><td>"+fmtTime(r.time)+"</td><td>"+r.arm+"</td><td>"+r.sys+"</td><td>"+r.dia+"</td><td>"+r.pulse+"</td><td></td><td></td>";
+      tr.children[6].appendChild(badge(cat));
+      var delBtn = document.createElement("button");
+      delBtn.className="del"; delBtn.textContent="Remove"; delBtn.type="button";
+      delBtn.addEventListener("click", function(){
+        readings = readings.filter(function(x){ return x.id !== r.id; });
+        saveReadings(); renderAll(); drawCharts();
+      });
+      tr.lastElementChild.appendChild(delBtn);
+      htbody.appendChild(tr);
+    });
+  }
+
+  // ---- Canvas charts ----
+  function styleVar(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function clear(ctx,w,h){ ctx.clearRect(0,0,w,h); }
+
+  function drawTrend(){
+    var cv = document.getElementById("trendChart"); var ctx = cv.getContext("2d");
+    var w=cv.width,h=cv.height; clear(ctx,w,h);
+    var sr = sortedReadings().slice(-20);
+    var ink = styleVar('--ink-soft') || "#777", line = styleVar('--line') || "#ddd";
+    var padL=40,padR=16,padT=16,padB=36;
+    var plotW=w-padL-padR, plotH=h-padT-padB;
+    if(!sr.length){
+      ctx.fillStyle=ink; ctx.font="14px sans-serif"; ctx.fillText("No data yet — add a reading to see your trend.",padL,h/2); return;
+    }
+    var maxV=0,minV=300;
+    sr.forEach(function(r){ maxV=Math.max(maxV,r.sys,r.pulse); minV=Math.min(minV,r.dia,r.pulse); });
+    maxV+=10; minV=Math.max(0,minV-10);
+    function x(i){ return padL + (sr.length===1?0:(i/(sr.length-1))*plotW); }
+    function y(v){ return padT + plotH - ((v-minV)/(maxV-minV))*plotH; }
+    // grid
+    ctx.strokeStyle=line; ctx.lineWidth=1; ctx.fillStyle=ink; ctx.font="11px sans-serif";
+    for(var g=0; g<=4; g++){
+      var gy = padT + (plotH/4)*g;
+      ctx.beginPath(); ctx.moveTo(padL,gy); ctx.lineTo(w-padR,gy); ctx.stroke();
+      var val = Math.round(maxV - (maxV-minV)*(g/4));
+      ctx.fillText(val, 4, gy+4);
+    }
+    function series(key,color){
+      ctx.strokeStyle=color; ctx.lineWidth=2.2; ctx.beginPath();
+      sr.forEach(function(r,i){ var px=x(i),py=y(r[key]); if(i===0) ctx.moveTo(px,py); else ctx.lineTo(px,py); });
+      ctx.stroke();
+      ctx.fillStyle=color;
+      sr.forEach(function(r,i){ ctx.beginPath(); ctx.arc(x(i),y(r[key]),2.6,0,7); ctx.fill(); });
+    }
+    series("sys","#D1495B"); series("dia","#1F6F5C"); series("pulse","#CF9B2B");
+    // x labels (first, mid, last)
+    ctx.fillStyle=ink; ctx.font="10px sans-serif"; ctx.textAlign="center";
+    [0, Math.floor((sr.length-1)/2), sr.length-1].forEach(function(i){
+      if(i<0) return;
+      ctx.fillText(fmtDate(sr[i].date), x(i), h-14);
+    });
+    ctx.textAlign="left";
+  }
+
+  function drawDistCategory(){
+    var cv = document.getElementById("distCategory"); var ctx = cv.getContext("2d");
+    var w=cv.width,h=cv.height; clear(ctx,w,h);
+    var ink = styleVar('--ink-soft') || "#777";
+    var cats = [["Normal","#2F9E59"],["Elevated","#CF9B2B"],["Stage 1","#E0802F"],["Stage 2","#D1495B"],["Crisis","#7A1F3D"]];
+    var counts = [0,0,0,0,0];
+    readings.forEach(function(r){
+      var c = classify(r.sys,r.dia).label;
+      if(c==="Normal") counts[0]++;
+      else if(c==="Elevated") counts[1]++;
+      else if(c==="Stage 1 hypertension") counts[2]++;
+      else if(c==="Stage 2 hypertension") counts[3]++;
+      else counts[4]++;
+    });
+    var max = Math.max(1, Math.max.apply(null,counts));
+    var padL=10,padR=10,padT=10,padB=50;
+    var plotW=w-padL-padR, plotH=h-padT-padB;
+    var bw = plotW/cats.length;
+    ctx.font="11px sans-serif"; ctx.textAlign="center";
+    cats.forEach(function(c,i){
+      var val=counts[i];
+      var bh = (val/max)*plotH;
+      var bx = padL + i*bw + bw*0.18;
+      var bwid = bw*0.64;
+      ctx.fillStyle = c[1];
+      ctx.fillRect(bx, padT+plotH-bh, bwid, bh);
+      ctx.fillStyle = ink;
+      ctx.fillText(val, bx+bwid/2, padT+plotH-bh-6);
+      ctx.save();
+      ctx.translate(bx+bwid/2, h-34);
+      ctx.fillText(c[0], 0, 0);
+      ctx.restore();
+    });
+    ctx.textAlign="left";
+    if(!readings.length){ ctx.fillStyle=ink; ctx.fillText("No data yet",padL+6,h/2-20); }
+  }
+
+  function drawDistArm(){
+    var cv = document.getElementById("distArm"); var ctx = cv.getContext("2d");
+    var w=cv.width,h=cv.height; clear(ctx,w,h);
+    var ink = styleVar('--ink-soft') || "#777";
+    var arms = ["Left","Right"];
+    var metrics = [["sys","#D1495B"],["dia","#1F6F5C"],["pulse","#CF9B2B"]];
+    var data = {};
+    arms.forEach(function(a){
+      var rows = readings.filter(function(r){ return r.arm===a; });
+      var avg = {sys:0,dia:0,pulse:0};
+      if(rows.length){
+        rows.forEach(function(r){ avg.sys+=r.sys; avg.dia+=r.dia; avg.pulse+=r.pulse; });
+        avg.sys/=rows.length; avg.dia/=rows.length; avg.pulse/=rows.length;
+      }
+      data[a] = {avg:avg, n:rows.length};
+    });
+    var max = 10;
+    arms.forEach(function(a){ metrics.forEach(function(m){ max=Math.max(max,data[a].avg[m[0]]); }); });
+    max += 15;
+    var padL=10,padR=10,padT=14,padB=50;
+    var plotW=w-padL-padR, plotH=h-padT-padB;
+    var groupW = plotW/arms.length;
+    ctx.font="11px sans-serif"; ctx.textAlign="center";
+    arms.forEach(function(a,gi){
+      var gx = padL + gi*groupW;
+      metrics.forEach(function(m,mi){
+        var val = data[a].avg[m[0]];
+        var bh = (val/max)*plotH;
+        var bw = groupW*0.2;
+        var bx = gx + groupW*0.18 + mi*(bw+6);
+        ctx.fillStyle = m[1];
+        ctx.fillRect(bx, padT+plotH-bh, bw, bh);
+        if(val>0){ ctx.fillStyle=ink; ctx.fillText(Math.round(val), bx+bw/2, padT+plotH-bh-5); }
+      });
+      ctx.fillStyle = ink;
+      ctx.fillText(a+" ("+data[a].n+")", gx+groupW/2, h-34);
+    });
+    ctx.textAlign="left";
+    if(!readings.length){ ctx.fillStyle=ink; ctx.fillText("No data yet",padL+6,h/2-20); }
+  }
+
+  function drawCharts(){ drawTrend(); drawDistCategory(); drawDistArm(); }
+
+  // ---- Installable app setup (manifest + home-screen icon) ----
+  function generateIcon(size){
+    var c = document.createElement("canvas"); c.width=size; c.height=size;
+    var g = c.getContext("2d");
+    var grad = g.createLinearGradient(0,0,size,size);
+    grad.addColorStop(0,"#1F6F5C"); grad.addColorStop(1,"#0F2A23");
+    var r = size*0.22;
+    g.fillStyle = grad;
+    g.beginPath();
+    g.moveTo(r,0); g.arcTo(size,0,size,size,r); g.arcTo(size,size,0,size,r);
+    g.arcTo(0,size,0,0,r); g.arcTo(0,0,size,0,r); g.closePath(); g.fill();
+    g.strokeStyle = "#fff"; g.lineWidth = size*0.045; g.lineCap="round"; g.lineJoin="round";
+    g.beginPath();
+    var y = size*0.56;
+    g.moveTo(size*0.14,y);
+    g.lineTo(size*0.33,y);
+    g.lineTo(size*0.42,size*0.32);
+    g.lineTo(size*0.52,size*0.74);
+    g.lineTo(size*0.60,y);
+    g.lineTo(size*0.86,y);
+    g.stroke();
+    return c.toDataURL("image/png");
+  }
+  function setupPWA(){
+    try{
+      var icon192 = generateIcon(192), icon512 = generateIcon(512);
+      document.getElementById("appleIcon").href = icon192;
+      var manifest = {
+        name:"Pulse Log — Blood Pressure Tracker", short_name:"Pulse Log",
+        start_url:".", display:"standalone", background_color:"#EEF2F0", theme_color:"#1F6F5C",
+        icons:[{src:icon192,sizes:"192x192",type:"image/png"},{src:icon512,sizes:"512x512",type:"image/png"}]
+      };
+      var blob = new Blob([JSON.stringify(manifest)], {type:"application/json"});
+      document.getElementById("manifestLink").href = URL.createObjectURL(blob);
+    }catch(e){}
+  }
+  setupPWA();
+
+  renderAll();
+  drawCharts();
+  window.addEventListener("resize", function(){ if(document.getElementById("view-charts").classList.contains("active")) drawCharts(); });
+})();
+</script>
+</body>
+</html>
